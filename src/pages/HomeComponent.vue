@@ -1,5 +1,6 @@
 <template>
-    <div class="flex justify-between ">
+  <div>
+    <div class="flex justify-between">
       <h2 class="font-bold text-xl p-10">Все кроссовки</h2>
       <div class="flex gap-3 items-center">
         <select
@@ -24,7 +25,8 @@
       </div>
     </div>
 
-    <Cards :items="items" @addToFavorite="addToFavorite" />
+    <Cards :items="items" @addToFavorite="addToFavorite" @addToAdded="addToAdded" />
+  </div>
 </template>
 
 <script setup>
@@ -88,24 +90,51 @@ const fetchFavorites = async () => {
     console.log(error)
   }
 }
+const fetchAdded = async () => {
+  try {
+    const { data: added } = await axios.get(`https://2564bebf5f31854a.mokky.dev/added`)
+    items.value = items.value.map((item) => {
+      const adds = added.find((add) => add.sneakerId === item.id)
+      if (!adds) {
+        return item
+      }
+      return {
+        ...item,
+        isAdded: true,
+        addId: adds.id
+      }
+    })
+  } catch (error) {
+    console.log(error)
+  }
+}
+const addToAdded = async (item) => {
+  try {
+    if (!item.isAdded) {
+      const obj = { sneakerId: item.id }
+      const { data } = await axios.post('https://2564bebf5f31854a.mokky.dev/added', obj)
+      item.isAdded = true
+      item.addId = data.id
+      console.log(item.addId)
+    } else {
+      await axios.delete(`https://2564bebf5f31854a.mokky.dev/added/${item.addId}`)
+      item.isAdded = false
+    }
+  } catch (error) {}
+}
 
 const addToFavorite = async (item) => {
   try {
-    if(!item.isFavorite) {
-      const obj = { sneakerId: item.id}
+    if (!item.isFavorite) {
+      const obj = { sneakerId: item.id }
       const { data } = await axios.post('https://2564bebf5f31854a.mokky.dev/favorites', obj)
       item.isFavorite = true
       item.favoriteId = data.id
-
-    }
-    else {
+    } else {
       await axios.delete(`https://2564bebf5f31854a.mokky.dev/favorites/${item.favoriteId}`)
       item.isFavorite = false
     }
-  } catch (error) {
-    
-  }
-  
+  } catch (error) {}
 }
 
 const onChangeSelect = (event) => {
@@ -119,6 +148,7 @@ const onChangeInput = (event) => {
 onMounted(async () => {
   await fetchItems()
   await fetchFavorites()
+  await fetchAdded()
 })
 watch(filters, fetchItems)
 </script>
